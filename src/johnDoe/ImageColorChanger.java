@@ -4,6 +4,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ImageColorChanger {
     // & : AND 연산자
@@ -16,14 +18,52 @@ public class ImageColorChanger {
     public static final String SOURCE_FILE = "./resources/many-flowers.jpg";
     public static final String DESTINATION_FILE = "./out/resources/many-flowers.jpg";
 
+
     public static void main(String[] args) throws IOException {
         BufferedImage originalImage = ImageIO.read(new File(SOURCE_FILE));
         BufferedImage resultImage = new BufferedImage(originalImage.getWidth(), originalImage.getHeight(), BufferedImage.TYPE_INT_RGB);
 
-        recolorSingleThreaded(originalImage, resultImage);
+        long startTime = System.currentTimeMillis();
+
+//        recolorSingleThreaded(originalImage, resultImage);
+        recolorMultiThread(originalImage, resultImage, 2);
+
+        long endTime = System.currentTimeMillis();
+        long duration = endTime - startTime;
 
         File outputFile = new File(DESTINATION_FILE);
         ImageIO.write(resultImage, "jpg", outputFile);
+
+        System.out.println(duration);
+
+    }
+
+    public static void recolorMultiThread(BufferedImage originalImage, BufferedImage resultImage, int numberOfThreads) {
+        List<Thread> threads = new ArrayList<>();
+        int width = originalImage.getWidth();
+        int height = originalImage.getHeight();
+
+        for (int i = 0; i < numberOfThreads; i++) {
+            final int threadMultiplier = i;
+            Thread thread = new Thread(() -> {
+                int leftCorner = 0;
+                int topCorner = height * threadMultiplier;
+
+                recolorImage(originalImage, resultImage, leftCorner, topCorner, width, height);
+            });
+            threads.add(thread);
+        }
+
+        for (Thread thread : threads) {
+            thread.start();
+        }
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                //적절한 예외 처리.
+            }
+        }
 
     }
 
@@ -31,10 +71,10 @@ public class ImageColorChanger {
         recolorImage(originalImage, resultImage, 0, 0, originalImage.getWidth(), originalImage.getHeight());
     }
 
-    public static void recolorImage(BufferedImage originalImage, BufferedImage resultImage, int leftConner, int topConner,
+    public static void recolorImage(BufferedImage originalImage, BufferedImage resultImage, int leftCorner, int topCorner,
                                     int width, int height) {
-        for (int x = leftConner; x < leftConner + width && x < originalImage.getWidth(); x++) {
-            for (int y = topConner; y < topConner + height && y < originalImage.getHeight(); y++) {
+        for (int x = leftCorner; x < leftCorner + width && x < originalImage.getWidth(); x++) {
+            for (int y = topCorner; y < topCorner + height && y < originalImage.getHeight(); y++) {
                 recolorPixel(originalImage, resultImage, x, y);
             }
         }
